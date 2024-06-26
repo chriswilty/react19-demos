@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+	Suspense,
+	use,
+	useCallback,
+	useEffect,
+	useMemo,
+	useState,
+} from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 
 import { service, Item } from './service';
@@ -50,10 +57,13 @@ const ArticleView = ({
 };
 
 type ArticleListProps = {
-	items: Array<Item>;
+	itemsPromise: Promise<Array<Item>>;
 };
 
-const ArticleList = ({ items }: ArticleListProps) => {
+const ArticleList = ({ itemsPromise }: ArticleListProps) => {
+	// This component will suspend until promise resolves
+	const items = use(itemsPromise);
+
 	return (
 		<main className="card">
 			<ul>
@@ -68,12 +78,16 @@ const ArticleList = ({ items }: ArticleListProps) => {
 };
 
 const ArticleBrowser = () => {
-	// The React 18 way, a bit icky...
-	const [items, setItems] = useState<Array<Item>>();
+	// React 19 with use(): We can now pass a promise of data to ArticleList, which will
+	// suspend until the promise is resolved.
+	// TODO Handle data insert after update: Unpack promise, add new item, set as new promise?
+	const [itemsPromise, setItemsPromise] = useState<Promise<Array<Item>>>(
+		Promise.resolve([])
+	);
 
 	useEffect(() => {
 		const abortController = new AbortController();
-		void service.fetchItems(abortController.signal).then(setItems);
+		setItemsPromise(service.fetchItems(abortController.signal));
 		return () => abortController.abort();
 	}, []);
 
@@ -97,7 +111,9 @@ const ArticleBrowser = () => {
 				<h1>My Favourite Things</h1>
 			</header>
 			<ErrorBoundary fallback={errorMessage}>
-				{items ? <ArticleList items={items} /> : loader}
+				<Suspense fallback={loader}>
+					<ArticleList itemsPromise={itemsPromise} />
+				</Suspense>
 			</ErrorBoundary>
 		</div>
 	);
