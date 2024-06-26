@@ -1,10 +1,9 @@
 import {
-	Suspense,
-	use,
 	useCallback,
 	useEffect,
 	useMemo,
 	useState,
+	useTransition,
 } from 'react';
 
 import { service, Item } from './service';
@@ -56,39 +55,34 @@ const ArticleView = ({
 };
 
 type ArticleListProps = {
-	itemsPromise: Promise<Array<Item>>;
+	items: Array<Item>;
 };
 
-const ArticleList = ({ itemsPromise }: ArticleListProps) => {
-	// This component will suspend until promise resolves
-	const items = use(itemsPromise);
-
-	return (
-		<main className="card flex-column flex-grow-1">
-			{items.length > 0 && (
-				<ul className="flex-column gap-2">
-					{items.map((item) => (
-						<li key={item.title}>
-							<ArticleView {...item} />
-						</li>
-					))}
-				</ul>
-			)}
-		</main>
-	);
-};
+const ArticleList = ({ items }: ArticleListProps) => (
+	<main className="card flex-column flex-grow-1">
+		{items.length > 0 && (
+			<ul className="flex-column gap-2">
+				{items.map((item) => (
+					<li key={item.title}>
+						<ArticleView {...item} />
+					</li>
+				))}
+			</ul>
+		)}
+	</main>
+);
 
 const ArticleBrowser = () => {
-	// React 19 with use(): We can now pass a promise of data to ArticleList, which will
-	// suspend until the promise is resolved.
-	// TODO Handle data insert after update: Unpack promise, add new item, set as new promise?
-	const [itemsPromise, setItemsPromise] = useState<Promise<Array<Item>>>(
-		Promise.resolve([])
-	);
+	// React 19 data loading with useTransition()
+	const [isLoading, startTransition] = useTransition();
+	const [items, setItems] = useState<Array<Item>>([]);
 
 	useEffect(() => {
 		const abortController = new AbortController();
-		setItemsPromise(service.fetchItems(abortController.signal));
+		startTransition(async () => {
+			const data = await service.fetchItems(abortController.signal);
+			setItems(data);
+		});
 		return () => abortController.abort();
 	}, []);
 
@@ -103,9 +97,7 @@ const ArticleBrowser = () => {
 			<header className="card">
 				<h1>My Favourite Things</h1>
 			</header>
-			<Suspense fallback={loader}>
-				<ArticleList itemsPromise={itemsPromise} />
-			</Suspense>
+			{isLoading ? loader : <ArticleList items={items} />}
 		</div>
 	);
 };
