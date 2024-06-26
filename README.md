@@ -2,16 +2,16 @@
 
 Playing around with React 19 features:
 
-- Actions, including async transitions and `useActionState`.
-- Forms: enhancing the native `form` and `button` elements, and a new `useFormStatus` hook.
-- At last! We have a `useOptimistic` hook.
-- `use` with promises and conditionals.
+- Actions, async transitions and `useActionState`
+- Forms: enhancing the native `form` and `button` elements, and a new `useFormStatus` hook
+- At last! We have a `useOptimistic` hook, but what's it like to use?
+- `use` with promises and conditionals: can this help us with data loading?
 
 ## Initial thoughts
 
-These are mostly related to data handling and asynchronicity. With the `useTransition` hook now
-allowing asynchronous transitions, we can clean our code of the ubiquitous `void doSomethingAsyncThenUpdateState()` pattern within
-useEffects.
+These are mostly related to data handling and asynchronous state updates. With the `useTransition`
+hook now allowing asynchronous transitions, we can clean our code of the ubiquitous
+`void doSomethingAsyncThenUpdateState()` pattern within useEffects.
 
 They also give a feeling of being more in control of data flow. Consider the use of `void` above: we
 want to perform an asynchronous action, such as a data fetch, without blocking the UI. We call an

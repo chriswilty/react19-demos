@@ -11,7 +11,7 @@
 	-moz-osx-font-smoothing: grayscale;
 }
 
-body {
+#root {
 	margin: 0;
 	position: absolute;
 	top: 0;
@@ -19,13 +19,25 @@ body {
 	bottom: 0;
 	right: 0;
 	display: flex;
-	align-items: center;
 	justify-content: center;
 }
 
-h1 {
-	font-size: 4rem;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
 	line-height: 1;
+}
+
+h1 {
+	margin: 1.5rem 0;
+	font-size: 3rem;
+}
+h2 {
+	margin: 1.25rem 0;
+	font-size: 2rem;
 }
 
 button {
@@ -46,6 +58,20 @@ button:hover {
 button:focus,
 button:focus-visible {
 	outline: 0.125rem solid white;
+}
+
+button.inline {
+	border-width: 0;
+	border-radius: 0.125rem;
+	padding: 0 0 0.125rem;
+	background-color: transparent;
+	color: #00c0c0;
+	font-size: 1.25rem;
+	text-decoration: underline;
+	outline-offset: 0.375rem;
+}
+button.inline:hover {
+	color: #00e0e0;
 }
 
 @media (prefers-color-scheme: light) {

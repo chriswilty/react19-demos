@@ -1,0 +1,40 @@
+.article-browser {
+	width: 60rem;
+	padding: 2rem;
+}
+
+.article-browser main {
+	overflow: hidden;
+}
+
+.article-browser ul {
+	margin: 0;
+	padding: 0;
+	list-style-type: none;
+	overflow: auto;
+}
+.article-browser li {
+	border-radius: 0.25rem;
+	padding: 0.5rem 0.5rem 0;
+}
+
+.article-browser article {
+	padding-bottom: 0.5rem;
+}
+.article-browser article h2 {
+	margin: 0;
+}
+.article-browser article p {
+	margin-top: 0;
+	font-size: 1.25rem;
+}
+.article-browser article img {
+	width: 25%;
+	min-height: 6rem;
+	float: left; /* Yikes! Welcome to the nineties */
+	margin: 0.5rem 1rem 0.5rem 0;
+	border: 0.125rem solid white;
+}
+.article-browser article.expanded img {
+	width: 40%;
+}
