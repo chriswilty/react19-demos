@@ -1,5 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useErrorBoundary } from 'react-error-boundary';
+import {
+	Suspense,
+	use,
+	useCallback,
+	useEffect,
+	useMemo,
+	useState,
+} from 'react';
 
 import { service, Item } from './service';
 import Spinner from './Spinner';
@@ -50,10 +56,13 @@ const ArticleView = ({
 };
 
 type ArticleListProps = {
-	items: Array<Item>;
+	itemsPromise: Promise<Array<Item>>;
 };
 
-const ArticleList = ({ items }: ArticleListProps) => {
+const ArticleList = ({ itemsPromise }: ArticleListProps) => {
+	// This component will suspend until promise resolves
+	const items = use(itemsPromise);
+
 	return (
 		<main className="card flex-column flex-grow-1">
 			{items.length > 0 && (
@@ -70,25 +79,18 @@ const ArticleList = ({ items }: ArticleListProps) => {
 };
 
 const ArticleBrowser = () => {
-	// The React 18 way, a bit icky...
-	const [isLoading, setLoading] = useState(0);
-	const [items, setItems] = useState<Array<Item>>([]);
-	const { showBoundary } = useErrorBoundary();
+	// React 19 with use(): We can now pass a promise of data to ArticleList, which will
+	// suspend until the promise is resolved.
+	// TODO Handle data insert after update: Unpack promise, add new item, set as new promise?
+	const [itemsPromise, setItemsPromise] = useState<Promise<Array<Item>>>(
+		Promise.resolve([])
+	);
 
 	useEffect(() => {
 		const abortController = new AbortController();
-		setLoading((prev) => prev + 1);
-
-		void service
-			.fetchItems(abortController.signal)
-			.then((items) => setItems(items))
-			.catch((err: unknown) => showBoundary(err))
-			.finally(() => setLoading((prev) => prev - 1));
-
-		return () => {
-			abortController.abort();
-		};
-	}, [showBoundary]);
+		setItemsPromise(service.fetchItems(abortController.signal));
+		return () => abortController.abort();
+	}, []);
 
 	const loader = (
 		<div className="card flex-column flex-center flex-grow-1">
@@ -101,7 +103,9 @@ const ArticleBrowser = () => {
 			<header className="card">
 				<h1>My Favourite Things</h1>
 			</header>
-			{isLoading > 0 ? loader : <ArticleList items={items} />}
+			<Suspense fallback={loader}>
+				<ArticleList itemsPromise={itemsPromise} />
+			</Suspense>
 		</div>
 	);
 };
