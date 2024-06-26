@@ -11,12 +11,15 @@
 		"preview": "vite preview --strictPort --port 5173 --open"
 	},
 	"dependencies": {
-		"react": "next",
-		"react-dom": "next"
+		"@types/node": "^20.14.2",
+		"@types/react": "latest",
+		"@types/react-dom": "latest",
+		"msw": "^2.3.1",
+		"react": "rc",
+		"react-dom": "rc",
+		"react-error-boundary": "^4.0.13"
 	},
 	"devDependencies": {
-		"@types/react": "^18.3.2",
-		"@types/react-dom": "^18.3.0",
 		"@typescript-eslint/eslint-plugin": "^7.9.0",
 		"@typescript-eslint/parser": "^7.9.0",
 		"@vitejs/plugin-react-swc": "^3.6.0",
@@ -30,5 +33,14 @@
 		"typescript": "^5.4.5",
 		"vite": "^5.2.11"
 	},
-	"packageManager": "yarn@4.2.2"
+	"resolutions": {
+		"@types/react": "npm:types-react@rc",
+		"@types/react-dom": "npm:types-react-dom@rc"
+	},
+	"packageManager": "yarn@4.2.2",
+	"msw": {
+		"workerDirectory": [
+			"public"
+		]
+	}
 }

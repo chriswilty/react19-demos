@@ -25,11 +25,26 @@ module.exports = {
 		project: ['./tsconfig.json', './tsconfig.node.json'],
 		tsconfigRootDir: __dirname,
 	},
-	plugins: ['react-refresh'],
+	plugins: ['react-refresh', 'jsx-a11y'],
 	rules: {
+		eqeqeq: 'error',
+		'prefer-template': 'error',
 		'react-refresh/only-export-components': [
 			'warn',
 			{ allowConstantExport: true },
+		],
+		'@typescript-eslint/array-type': ['error', { default: 'generic' }],
+		'@typescript-eslint/consistent-type-definitions': ['error', 'type'],
+		'@typescript-eslint/no-confusing-void-expression': [
+			'error',
+			{ ignoreArrowShorthand: true },
+		],
+		'@typescript-eslint/restrict-template-expressions': [
+			'error',
+			{
+				allowNumber: true,
+				allowBoolean: true,
+			},
 		],
 	},
 };
