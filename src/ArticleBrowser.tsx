@@ -8,7 +8,6 @@ import {
 	useState,
 	useTransition,
 } from 'react';
-import { useErrorBoundary } from 'react-error-boundary';
 
 import { service, Item } from './service';
 import Spinner from './Spinner';
@@ -169,39 +168,34 @@ const ArticleList = ({ items, inert }: ArticleListProps) => {
 
 const ArticleBrowser = () => {
 	// React 19 data loading with useTransition()
-	const [isLoading, startTransition] = useTransition();
+	const [isLoading, startLoadTransition] = useTransition();
 	const [items, setItems] = useState<Array<Item>>([]);
 
 	useEffect(() => {
 		const abortController = new AbortController();
-		startTransition(async () => {
+		startLoadTransition(async () => {
 			const data = await service.fetchItems(abortController.signal);
 			setItems(data);
 		});
 		return () => abortController.abort();
 	}, []);
 
-	// React 18 form handling
+	// React 19 update handling with useTransition()
 	const [formIsVisible, showForm, hideForm] = useBoolean(false);
-	const [formSubmitting, setFormSubmitting] = useState(false);
+	const [isSubmitting, startUpdateTransition] = useTransition();
 	const [error, setError] = useState<string>();
-	const { showBoundary } = useErrorBoundary();
 
 	const handleAdd = (item: Item) => {
 		setError(undefined);
-		setFormSubmitting(true);
-		void service
-			.submitItem(item)
-			.then((result) => {
-				if ('error' in result) {
-					setError(result.error);
-				} else {
-					setItems((prevItems) => [result.item, ...prevItems]);
-					hideForm();
-				}
-			})
-			.catch((err: unknown) => showBoundary(err))
-			.finally(() => setFormSubmitting(false));
+		startUpdateTransition(async () => {
+			const result = await service.submitItem(item);
+			if ('error' in result) {
+				setError(result.error);
+			} else {
+				setItems((prevItems) => [result.item, ...prevItems]);
+				hideForm();
+			}
+		});
 	};
 
 	const loader = (
@@ -225,7 +219,7 @@ const ArticleBrowser = () => {
 				{formIsVisible && (
 					<ArticleForm
 						error={error}
-						submitting={formSubmitting}
+						submitting={isSubmitting}
 						onSubmit={handleAdd}
 						onCancel={hideForm}
 					/>
