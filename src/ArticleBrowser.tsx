@@ -16,6 +16,13 @@ import './ArticleBrowser.css';
 
 type ArticleViewProps = Item;
 
+const useBoolean = (
+	initialState: boolean
+): [boolean, () => void, () => void] => {
+	const [state, setState] = useState<boolean>(initialState);
+	return [state, () => setState(true), () => setState(false)];
+};
+
 const ArticleView = ({
 	title,
 	description,
@@ -158,29 +165,26 @@ const ArticleList = ({ items, inert }: ArticleListProps) => {
 
 const ArticleBrowser = () => {
 	// React 19 data loading with useTransition()
-	const [isLoading, startTransition] = useTransition();
+	const [isLoading, startLoadTransition] = useTransition();
 	const [items, setItems] = useState<Array<Item>>([]);
 
 	useEffect(() => {
 		const abortController = new AbortController();
-		startTransition(async () => {
+		startLoadTransition(async () => {
 			const data = await service.fetchItems(abortController.signal);
 			setItems(data);
 		});
 		return () => abortController.abort();
 	}, []);
 
-	// React 18 form handling
-	const [formVisible, setFormVisible] = useState(false);
-	const showForm = useCallback(() => setFormVisible(true), []);
-	const hideForm = useCallback(() => setFormVisible(false), []);
-	const [formSubmitting, setFormSubmitting] = useState(false);
+	// React 19 update handling with useTransition()
+	const [formIsVisible, showForm, hideForm] = useBoolean(false);
+	const [isSubmitting, startUpdateTransition] = useTransition();
 
 	const handleAdd = (item: Item) => {
-		setFormSubmitting(true);
-		void service.submitItem(item).then((newItem) => {
-			setFormSubmitting(false);
-			setItems((prevItems) => [...prevItems, newItem]);
+		startUpdateTransition(async () => {
+			const savedItem = await service.submitItem(item);
+			setItems((prevItems) => [...prevItems, savedItem]);
 			hideForm();
 		});
 	};
@@ -211,11 +215,11 @@ const ArticleBrowser = () => {
 						{isLoading ? (
 							loader
 						) : (
-							<ArticleList items={items} inert={formVisible} />
+							<ArticleList items={items} inert={formIsVisible} />
 						)}
-						{formVisible && (
+						{formIsVisible && (
 							<ArticleForm
-								submitting={formSubmitting}
+								submitting={isSubmitting}
 								onSubmit={handleAdd}
 								onCancel={hideForm}
 							/>
