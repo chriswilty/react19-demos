@@ -8,7 +8,6 @@ import {
 	useState,
 	useTransition,
 } from 'react';
-import { useErrorBoundary } from 'react-error-boundary';
 
 import { service, Item } from './service';
 import Spinner from './Spinner';
@@ -68,7 +67,7 @@ const ArticleView = ({
 type ArticleFormProps = {
 	error?: string;
 	submitting: boolean;
-	onSubmit: (item: Item) => Promise<void>;
+	onSubmit: (item: Item) => void;
 	onCancel: () => void;
 };
 
@@ -83,12 +82,12 @@ const ArticleForm = ({
 	const [imageAltId, imageAltName] = [useId(), 'imageAlt'];
 	const [descriptionId, descriptionName] = [useId(), 'description'];
 
-	const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+	const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
 		if (submitting) return;
 
 		const formData = new FormData(event.currentTarget);
-		await onSubmit({
+		onSubmit({
 			title: formData.get(titleName) as string,
 			imageUrl: formData.get(imageUrlName) as string,
 			imageAlt: formData.get(imageAltName) as string,
@@ -171,33 +170,31 @@ const ArticleList = ({ items, inert }: ArticleListProps) => {
 
 const ArticleBrowser = () => {
 	// React 19 data loading with useTransition()
-	const [isLoading, startTransition] = useTransition();
+	const [isLoading, startLoadTransition] = useTransition();
 	const [items, setItems] = useState<Array<Item>>([]);
 
 	useEffect(() => {
 		const abortController = new AbortController();
-		startTransition(async () => {
+		startLoadTransition(async () => {
 			const data = await service.fetchItems(abortController.signal);
 			setItems(data);
 		});
 		return () => abortController.abort();
 	}, []);
 
-	// React 18 form handling
+	// React 19 update handling with useTransition()
 	const [formIsVisible, showForm, hideForm] = useBoolean(false);
-	const [formSubmitting, setFormSubmitting] = useState(false);
+	const [isSubmitting, startUpdateTransition] = useTransition();
 	const [error, setError] = useState<string>();
-	const { showBoundary } = useErrorBoundary();
 
 	const closeForm = () => {
 		hideForm();
 		setError(undefined);
 	};
 
-	const handleAdd = async (item: Item) => {
+	const handleAdd = (item: Item) => {
 		setError(undefined);
-		setFormSubmitting(true);
-		try {
+		startUpdateTransition(async () => {
 			const result = await service.submitItem(item);
 			if ('error' in result) {
 				setError(result.error);
@@ -205,11 +202,7 @@ const ArticleBrowser = () => {
 				setItems((prevItems) => [result.item, ...prevItems]);
 				closeForm();
 			}
-		} catch (err: unknown) {
-			showBoundary(err);
-		} finally {
-			setFormSubmitting(false);
-		}
+		});
 	};
 
 	const loader = (
@@ -233,7 +226,7 @@ const ArticleBrowser = () => {
 				{formIsVisible && (
 					<ArticleForm
 						error={error}
-						submitting={formSubmitting}
+						submitting={isSubmitting}
 						onSubmit={handleAdd}
 						onCancel={closeForm}
 					/>
