@@ -26,6 +26,27 @@ const fetchItems = async (signal: AbortSignal) => {
 	}
 };
 
+type SubmitResult = { item: Item } | { error: string };
+
+const submitItem = async (item: Item): Promise<SubmitResult> => {
+	const response = await fetch(`${baseUrl}/items`, {
+		method: 'POST',
+		headers: { 'content-type': 'application/json' },
+		body: JSON.stringify(item),
+	});
+
+	if (!response.ok) {
+		return {
+			error: `Submit failed: ${response.statusText}`,
+		};
+	}
+
+	return {
+		item: (await response.json()) as Item,
+	};
+};
+
 export const service = {
 	fetchItems,
+	submitItem,
 };

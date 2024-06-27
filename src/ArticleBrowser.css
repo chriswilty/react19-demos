@@ -5,6 +5,7 @@
 
 .article-browser main {
 	overflow: hidden;
+	position: relative;
 }
 
 .article-browser ul {
@@ -37,4 +38,9 @@
 }
 .article-browser article.expanded img {
 	width: 40%;
+}
+.article-browser form .error {
+	margin: 0;
+	font-size: 1.25rem;
+	color: #ffc0c0;
 }
