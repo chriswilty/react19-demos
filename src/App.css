@@ -45,6 +45,36 @@
 	flex-grow: 3;
 }
 
+.grid-2-col {
+	display: grid;
+	grid-template-columns: [start] auto [middle] 1fr [end];
+	grid-template-rows: repeat(5, auto) 1fr;
+}
+
+.grid-row-start {
+	grid-column: start / middle;
+}
+
+.grid-row-stretch {
+	grid-column: start / end;
+}
+
+.grid-row-end {
+	grid-column: middle / end;
+}
+
+.grid-row-align-start {
+	align-self: start;
+}
+
+.absolute-fill {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	right: 0;
+}
+
 @media (prefers-color-scheme: light) {
 	.card {
 		background-color: white;

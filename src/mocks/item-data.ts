@@ -31,7 +31,7 @@ export const items: Array<Item> = [
 				'unconditional love of my children, yet hated by heroes. Anger can find me on the ' +
 				'calmest of days, while true serenity I find only in the wildest of storms.',
 			'What treasures I have held in these hands! I tell my secrets to the amber, smoky liquid ' +
-				'I now cradle, a spirit trapped in a dark casket for years while I roamed the lands, ' +
+				'I now cradle, a spirit locked away in a dark casket while I roamed the lands, ' +
 				'untethered from my destiny.',
 		],
 		imageUrl:

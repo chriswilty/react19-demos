@@ -5,6 +5,7 @@
 
 .article-browser main {
 	overflow: hidden;
+	position: relative;
 }
 
 .article-browser ul {
@@ -37,4 +38,39 @@
 }
 .article-browser article.expanded img {
 	width: 40%;
+}
+.article-browser form .error {
+	margin: 0;
+	font-size: 1.25rem;
+	color: #ffc0c0;
+}
+.article-browser form .error.hidden {
+	display: none;
+}
+.article-browser form .error::before {
+	content: '!';
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	margin-right: 0.5rem;
+	border: 0.125rem solid #ffc0c0;
+	border-radius: 50%;
+	background-color: transparent;
+	color: #ffc0c0;
+	font-weight: bold;
+	height: 1.75rem;
+	aspect-ratio: 1;
+}
+
+@media (prefers-color-scheme: light) {
+	.article-browser article img {
+		border-color: #292929;
+	}
+	.article-browser form .error {
+		color: #bb3030;
+	}
+	.article-browser form .error::before {
+		border-color: #bb3030;
+		color: #bb3030;
+	}
 }
