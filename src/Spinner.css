@@ -7,12 +7,19 @@
 	animation: rotate 1.8s infinite linear;
 }
 
+.spinner.button {
+	width: 1rem;
+	border-width: 0.25rem;
+}
+
 .spinner.standard {
 	width: 8rem;
+	border-width: 0.5rem;
 }
 
 .spinner.large {
 	width: 16rem;
+	border-width: 0.75rem;
 }
 
 @keyframes rotate {

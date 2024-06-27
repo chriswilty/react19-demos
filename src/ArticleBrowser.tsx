@@ -1,7 +1,10 @@
 import {
+	FormEvent,
 	useCallback,
 	useEffect,
+	useId,
 	useMemo,
+	useRef,
 	useState,
 	useTransition,
 } from 'react';
@@ -55,21 +58,103 @@ const ArticleView = ({
 	);
 };
 
-type ArticleListProps = {
-	items: Array<Item>;
+type ArticleFormProps = {
+	submitting: boolean;
+	onSubmit: (item: Item) => void;
+	onCancel: () => void;
 };
 
-const ArticleList = ({ items }: ArticleListProps) => (
-	<main className="card">
-		<ul>
+const ArticleForm = ({ submitting, onSubmit, onCancel }: ArticleFormProps) => {
+	const titleId = useId();
+	const imageUrlId = useId();
+	const imageAltId = useId();
+	const descriptionId = useId();
+
+	const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+		event.preventDefault();
+		const { elements } = event.currentTarget;
+		onSubmit({
+			title: (elements.namedItem(titleId) as HTMLInputElement).value,
+			imageUrl: (elements.namedItem(imageUrlId) as HTMLInputElement).value,
+			imageAlt: (elements.namedItem(imageAltId) as HTMLInputElement).value,
+			description: (
+				elements.namedItem(descriptionId) as HTMLTextAreaElement
+			).value
+				.trim()
+				.split('\n\n'),
+		});
+	};
+
+	return (
+		<form
+			className="card absolute-fill grid-2-col gap-2"
+			onSubmit={handleSubmit}
+		>
+			<label htmlFor={titleId}>Title</label>
+			<input id={titleId} name="title" required />
+			<label htmlFor={imageUrlId}>Image URL</label>
+			<input
+				id={imageUrlId}
+				name="imageUrl"
+				required
+				pattern="^https?://.+\.(jpe?g|png)$"
+			/>
+			<label htmlFor={imageAltId}>Image Alt Text</label>
+			<input id={imageAltId} name="imageAlt" required />
+			<label htmlFor={descriptionId}>Description</label>
+			<textarea id={descriptionId} name="description" required />
+			<div className="grid-row-end grid-row-align-start flex-row flex-center gap-1">
+				<button
+					aria-disabled={submitting}
+					className="flex-row flex-center gap-1 flex-grow-3"
+					type="submit"
+				>
+					Save Thing
+					{submitting && <Spinner size="button" />}
+				</button>
+				<button type="button" className="flex-grow-1" onClick={onCancel}>
+					Cancel
+				</button>
+			</div>
+		</form>
+	);
+};
+
+type ArticleListProps = {
+	items: Array<Item>;
+	inert?: boolean;
+};
+
+const ArticleList = ({ items, inert }: ArticleListProps) => {
+	const listRef = useRef<HTMLUListElement>(null);
+	const isLoadedRef = useRef(false);
+
+	useEffect(() => {
+		if (isLoadedRef.current) {
+			listRef.current?.lastElementChild?.scrollIntoView({
+				behavior: 'smooth',
+				block: 'nearest',
+			});
+		}
+	}, [items]);
+
+	useEffect(() => {
+		isLoadedRef.current = true;
+		return () => {
+			isLoadedRef.current = false;
+		};
+	}, []);
+
+	return (
+		<ul ref={listRef} inert={inert}>
 			{items.map((item) => (
 				<li key={item.title}>
 					<ArticleView {...item} />
 				</li>
 			))}
 		</ul>
-	</main>
-);
+	);
+};
 
 const ArticleBrowser = () => {
 	// React 19 data loading with useTransition()
@@ -84,6 +169,21 @@ const ArticleBrowser = () => {
 		});
 		return () => abortController.abort();
 	}, []);
+
+	// React 18 form handling
+	const [formVisible, setFormVisible] = useState(false);
+	const showForm = useCallback(() => setFormVisible(true), []);
+	const hideForm = useCallback(() => setFormVisible(false), []);
+	const [formSubmitting, setFormSubmitting] = useState(false);
+
+	const handleAdd = (item: Item) => {
+		setFormSubmitting(true);
+		void service.submitItem(item).then((newItem) => {
+			setFormSubmitting(false);
+			setItems((prevItems) => [...prevItems, newItem]);
+			hideForm();
+		});
+	};
 
 	const loader = (
 		<div className="card loader flex-column flex-center">
@@ -100,14 +200,30 @@ const ArticleBrowser = () => {
 	);
 
 	return (
-		<div className="article-browser">
-			<header className="card">
-				<h1>My Favourite Things</h1>
-			</header>
-			<ErrorBoundary fallback={errorMessage}>
-				{isLoading ? loader : <ArticleList items={items} />}
-			</ErrorBoundary>
-		</div>
+		<>
+			<div className="article-browser">
+				<header className="card flex-row flex-between">
+					<h1>My Favourite Things</h1>
+					<button onClick={showForm}>Add Something</button>
+				</header>
+				<ErrorBoundary fallback={errorMessage}>
+					<main className="card">
+						{isLoading ? (
+							loader
+						) : (
+							<ArticleList items={items} inert={formVisible} />
+						)}
+						{formVisible && (
+							<ArticleForm
+								submitting={formSubmitting}
+								onSubmit={handleAdd}
+								onCancel={hideForm}
+							/>
+						)}
+					</main>
+				</ErrorBoundary>
+			</div>
+		</>
 	);
 };
 
