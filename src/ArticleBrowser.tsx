@@ -1,5 +1,5 @@
 import {
-	FormEvent,
+	useActionState,
 	useCallback,
 	useEffect,
 	useId,
@@ -65,41 +65,43 @@ const ArticleView = ({
 };
 
 type ArticleFormProps = {
-	error?: string;
-	submitting: boolean;
-	onSubmit: (item: Item) => void;
+	onSuccess: (item: Item) => void;
 	onCancel: () => void;
 };
 
-const ArticleForm = ({
-	error,
-	submitting,
-	onSubmit,
-	onCancel,
-}: ArticleFormProps) => {
+const ArticleForm = ({ onSuccess, onCancel }: ArticleFormProps) => {
 	const [titleId, titleName] = [useId(), 'title'];
 	const [imageUrlId, imageUrlName] = [useId(), 'imageUrl'];
 	const [imageAltId, imageAltName] = [useId(), 'imageAlt'];
 	const [descriptionId, descriptionName] = [useId(), 'description'];
 
-	const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-		event.preventDefault();
-		const formData = new FormData(event.currentTarget);
-		onSubmit({
-			title: formData.get(titleName) as string,
-			imageUrl: formData.get(imageUrlName) as string,
-			imageAlt: formData.get(imageAltName) as string,
-			description: (formData.get(descriptionName) as string)
-				.trim()
-				.split('\n\n'),
-		});
-	};
+	/*
+	  I do not like this :(
+	  Form is cleared automatically even if submit failed, and
+	  error message is only cleared AFTER successful submit.
+	  So, useTransition is a far nicer solution.
+	*/
+	const [error, formAction, submitting] = useActionState(
+		async (_prevState: string | null, formData: FormData) => {
+			const result = await service.submitItem({
+				title: formData.get(titleName) as string,
+				imageUrl: formData.get(imageUrlName) as string,
+				imageAlt: formData.get(imageAltName) as string,
+				description: (formData.get(descriptionName) as string)
+					.trim()
+					.split('\n\n'),
+			});
+			if ('error' in result) {
+				return result.error;
+			}
+			onSuccess(result.item);
+			return null;
+		},
+		null
+	);
 
 	return (
-		<form
-			className="card absolute-fill grid-2-col gap-2"
-			onSubmit={handleSubmit}
-		>
+		<form className="card absolute-fill grid-2-col gap-2" action={formAction}>
 			<label htmlFor={titleId}>Title</label>
 			<input id={titleId} name={titleName} required />
 			<label htmlFor={imageUrlId}>Image URL</label>
@@ -113,7 +115,7 @@ const ArticleForm = ({
 			<input id={imageAltId} name={imageAltName} required />
 			<label htmlFor={descriptionId}>Description</label>
 			<textarea id={descriptionId} name={descriptionName} required />
-			{error && <p className="grid-row-end error">{error}</p>}
+			{!submitting && error && <p className="grid-row-end error">{error}</p>}
 			<div className="grid-row-end grid-row-align-start flex-row flex-center gap-1">
 				<button
 					aria-disabled={submitting}
@@ -180,22 +182,12 @@ const ArticleBrowser = () => {
 		return () => abortController.abort();
 	}, []);
 
-	// React 19 update handling with useTransition()
+	// React 19 update handling via useActionState() - see ArticleForm
 	const [formIsVisible, showForm, hideForm] = useBoolean(false);
-	const [isSubmitting, startUpdateTransition] = useTransition();
-	const [error, setError] = useState<string>();
 
-	const handleAdd = (item: Item) => {
-		setError(undefined);
-		startUpdateTransition(async () => {
-			const result = await service.submitItem(item);
-			if ('error' in result) {
-				setError(result.error);
-			} else {
-				setItems((prevItems) => [result.item, ...prevItems]);
-				hideForm();
-			}
-		});
+	const handleAdd = (savedItem: Item) => {
+		setItems((prevItems) => [savedItem, ...prevItems]);
+		hideForm();
 	};
 
 	const loader = (
@@ -217,12 +209,7 @@ const ArticleBrowser = () => {
 					<ArticleList items={items} inert={formIsVisible} />
 				)}
 				{formIsVisible && (
-					<ArticleForm
-						error={error}
-						submitting={isSubmitting}
-						onSubmit={handleAdd}
-						onCancel={hideForm}
-					/>
+					<ArticleForm onSuccess={handleAdd} onCancel={hideForm} />
 				)}
 			</main>
 		</div>
