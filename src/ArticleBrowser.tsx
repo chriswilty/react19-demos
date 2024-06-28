@@ -1,5 +1,5 @@
 import {
-	FormEvent,
+	useActionState,
 	useCallback,
 	useEffect,
 	useId,
@@ -66,50 +66,46 @@ const ArticleView = ({
 };
 
 type ArticleFormProps = {
-	submitting: boolean;
-	onSubmit: (item: Item) => void;
+	onSuccess: (item: Item) => void;
 	onCancel: () => void;
 };
 
-const ArticleForm = ({ submitting, onSubmit, onCancel }: ArticleFormProps) => {
-	const titleId = useId();
-	const imageUrlId = useId();
-	const imageAltId = useId();
-	const descriptionId = useId();
+const ArticleForm = ({ onSuccess, onCancel }: ArticleFormProps) => {
+	const [titleId, titleName] = [useId(), 'title'];
+	const [imageUrlId, imageUrlName] = [useId(), 'imageUrl'];
+	const [imageAltId, imageAltName] = [useId(), 'imageAlt'];
+	const [descriptionId, descriptionName] = [useId(), 'description'];
 
-	const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-		event.preventDefault();
-		const { elements } = event.currentTarget;
-		onSubmit({
-			title: (elements.namedItem(titleId) as HTMLInputElement).value,
-			imageUrl: (elements.namedItem(imageUrlId) as HTMLInputElement).value,
-			imageAlt: (elements.namedItem(imageAltId) as HTMLInputElement).value,
-			description: (
-				elements.namedItem(descriptionId) as HTMLTextAreaElement
-			).value
-				.trim()
-				.split('\n\n'),
-		});
-	};
+	const [, formAction, submitting] = useActionState(
+		async (_state: unknown, formData: FormData) => {
+			const savedItem = await service.submitItem({
+				title: formData.get(titleName) as string,
+				imageUrl: formData.get(imageUrlName) as string,
+				imageAlt: formData.get(imageAltName) as string,
+				description: (formData.get(descriptionName) as string)
+					.trim()
+					.split('\n\n'),
+			});
+			onSuccess(savedItem);
+		},
+		null
+	);
 
 	return (
-		<form
-			className="card absolute-fill grid-2-col gap-2"
-			onSubmit={handleSubmit}
-		>
+		<form className="card absolute-fill grid-2-col gap-2" action={formAction}>
 			<label htmlFor={titleId}>Title</label>
-			<input id={titleId} name="title" required />
+			<input id={titleId} name={titleName} required />
 			<label htmlFor={imageUrlId}>Image URL</label>
 			<input
 				id={imageUrlId}
-				name="imageUrl"
+				name={imageUrlName}
 				required
 				pattern="^https?://.+\.(jpe?g|png)$"
 			/>
 			<label htmlFor={imageAltId}>Image Alt Text</label>
-			<input id={imageAltId} name="imageAlt" required />
+			<input id={imageAltId} name={imageAltName} required />
 			<label htmlFor={descriptionId}>Description</label>
-			<textarea id={descriptionId} name="description" required />
+			<textarea id={descriptionId} name={descriptionName} required />
 			<div className="grid-row-end grid-row-align-start flex-row flex-center gap-1">
 				<button
 					aria-disabled={submitting}
@@ -177,16 +173,12 @@ const ArticleBrowser = () => {
 		return () => abortController.abort();
 	}, []);
 
-	// React 19 update handling with useTransition()
+	// React 19 update handling via useActionState() - see ArticleForm
 	const [formIsVisible, showForm, hideForm] = useBoolean(false);
-	const [isSubmitting, startUpdateTransition] = useTransition();
 
-	const handleAdd = (item: Item) => {
-		startUpdateTransition(async () => {
-			const savedItem = await service.submitItem(item);
-			setItems((prevItems) => [...prevItems, savedItem]);
-			hideForm();
-		});
+	const handleAdd = (savedItem: Item) => {
+		setItems((prevItems) => [...prevItems, savedItem]);
+		hideForm();
 	};
 
 	const loader = (
@@ -218,11 +210,7 @@ const ArticleBrowser = () => {
 							<ArticleList items={items} inert={formIsVisible} />
 						)}
 						{formIsVisible && (
-							<ArticleForm
-								submitting={isSubmitting}
-								onSubmit={handleAdd}
-								onCancel={hideForm}
-							/>
+							<ArticleForm onSuccess={handleAdd} onCancel={hideForm} />
 						)}
 					</main>
 				</ErrorBoundary>
