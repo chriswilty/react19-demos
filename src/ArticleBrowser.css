@@ -18,6 +18,17 @@
 	border-radius: 0.25rem;
 	padding: 0.5rem 0.5rem 0;
 }
+.article-browser li.saving {
+	animation: saving	1.8s ease-in-out infinite;
+}
+@keyframes saving {
+	0%, 100% {
+		background-color: rgba(255, 255, 255, 0.25);
+	}
+	50% {
+		background-color: rgba(255, 255, 255, 0.1);
+	}
+}
 
 .article-browser article {
 	padding-bottom: 0.5rem;
@@ -39,6 +50,11 @@
 .article-browser article.expanded img {
 	width: 40%;
 }
+
+.article-browser form.hidden {
+	display: none;
+}
+
 .article-browser form .error {
 	margin: 0;
 	font-size: 1.25rem;
@@ -72,5 +88,14 @@
 	.article-browser form .error::before {
 		border-color: #bb3030;
 		color: #bb3030;
+	}
+
+	@keyframes saving {
+		0%, 100% {
+			background-color: rgba(0, 0, 0, 0.1);
+		}
+		50% {
+			background-color: rgba(0, 0, 0, 0.025);
+		}
 	}
 }

@@ -1,0 +1,31 @@
+.toast {
+	display: flex;
+	align-items: center;
+	gap: 2rem;
+	position: absolute;
+	inset: unset;
+	top: calc(100% - 1rem);
+	left: 50%;
+	transform: translateX(-50%);
+	border: 0.125rem solid white;
+	border-radius: 0.375rem;
+	padding: 0.5rem 1rem;
+	font-size: 1.25rem;
+	z-index: 1;
+}
+.toast.hide {
+	display: none;
+}
+.toast.error {
+	border-color: #ffc0c0;
+	background-color: #bb3030;
+	color: white;
+}
+
+@media (prefers-color-scheme: light) {
+	.toast.error {
+		border-color: #bb3030;
+		background-color: #ffc0c0;
+		color: #292929;
+	}
+}
