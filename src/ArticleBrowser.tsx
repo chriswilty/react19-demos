@@ -1,9 +1,10 @@
 import {
-	useActionState,
+	startTransition,
 	useCallback,
 	useEffect,
 	useId,
 	useMemo,
+	useOptimistic,
 	useRef,
 	useState,
 	useTransition,
@@ -13,13 +14,6 @@ import { service, Item } from './service';
 import Spinner from './Spinner';
 import './ArticleBrowser.css';
 
-const useBoolean = (
-	initialState: boolean
-): [boolean, () => void, () => void] => {
-	const [state, setState] = useState<boolean>(initialState);
-	return [state, () => setState(true), () => setState(false)];
-};
-
 type ArticleViewProps = Item;
 
 const ArticleView = ({
@@ -27,6 +21,7 @@ const ArticleView = ({
 	description,
 	imageUrl,
 	imageAlt,
+	saving,
 }: ArticleViewProps) => {
 	const [isExpanded, setExpanded] = useState(false);
 	const toggle = useCallback(
@@ -48,8 +43,9 @@ const ArticleView = ({
 
 	return (
 		<article className={`flex-column gap-1 ${isExpanded ? 'expanded' : ''}`}>
-			<header>
+			<header className="flex-row gap-1">
 				<h2>{title}</h2>
+				{saving && <Spinner size="h2" />}
 			</header>
 			<section>
 				<img src={imageUrl} title={imageAlt} alt={imageAlt} />
@@ -65,43 +61,29 @@ const ArticleView = ({
 };
 
 type ArticleFormProps = {
-	onSuccess: (item: Item) => void;
+	onSubmit: (item: Item) => void;
 	onCancel: () => void;
 };
 
-const ArticleForm = ({ onSuccess, onCancel }: ArticleFormProps) => {
+const ArticleForm = ({ onSubmit, onCancel }: ArticleFormProps) => {
 	const [titleId, titleName] = [useId(), 'title'];
 	const [imageUrlId, imageUrlName] = [useId(), 'imageUrl'];
 	const [imageAltId, imageAltName] = [useId(), 'imageAlt'];
 	const [descriptionId, descriptionName] = [useId(), 'description'];
 
-	/*
-	  I do not like this :(
-	  Form is cleared automatically even if submit failed, and
-	  error message is only cleared AFTER successful submit.
-	  So, useTransition is a far nicer solution.
-	*/
-	const [error, formAction, submitting] = useActionState(
-		async (_prevState: string | null, formData: FormData) => {
-			const result = await service.submitItem({
-				title: formData.get(titleName) as string,
-				imageUrl: formData.get(imageUrlName) as string,
-				imageAlt: formData.get(imageAltName) as string,
-				description: (formData.get(descriptionName) as string)
-					.trim()
-					.split('\n\n'),
-			});
-			if ('error' in result) {
-				return result.error;
-			}
-			onSuccess(result.item);
-			return null;
-		},
-		null
-	);
+	const submitItem = (formData: FormData) => {
+		onSubmit({
+			title: formData.get(titleName) as string,
+			imageUrl: formData.get(imageUrlName) as string,
+			imageAlt: formData.get(imageAltName) as string,
+			description: (formData.get(descriptionName) as string)
+				.trim()
+				.split('\n\n'),
+		});
+	};
 
 	return (
-		<form className="card absolute-fill grid-2-col gap-2" action={formAction}>
+		<form className="absolute-fill grid-2-col gap-2 card" action={submitItem}>
 			<label htmlFor={titleId}>Title</label>
 			<input id={titleId} name={titleName} required />
 			<label htmlFor={imageUrlId}>Image URL</label>
@@ -115,15 +97,12 @@ const ArticleForm = ({ onSuccess, onCancel }: ArticleFormProps) => {
 			<input id={imageAltId} name={imageAltName} required />
 			<label htmlFor={descriptionId}>Description</label>
 			<textarea id={descriptionId} name={descriptionName} required />
-			{!submitting && error && <p className="grid-row-end error">{error}</p>}
 			<div className="grid-row-end grid-row-align-start flex-row flex-center gap-1">
 				<button
-					aria-disabled={submitting}
-					className="flex-row flex-center gap-1 flex-grow-3"
 					type="submit"
+					className="flex-row flex-center gap-1 flex-grow-3"
 				>
 					Save Thing
-					{submitting && <Spinner size="button" />}
 				</button>
 				<button type="button" className="flex-grow-1" onClick={onCancel}>
 					Cancel
@@ -159,7 +138,7 @@ const ArticleList = ({ items, inert }: ArticleListProps) => {
 		items.length > 0 && (
 			<ul ref={listRef} className="flex-column gap-2" inert={inert}>
 				{items.map((item) => (
-					<li key={item.title}>
+					<li key={item.title} className={item.saving ? 'saving' : undefined}>
 						<ArticleView {...item} />
 					</li>
 				))}
@@ -168,33 +147,74 @@ const ArticleList = ({ items, inert }: ArticleListProps) => {
 	);
 };
 
+type ArticleState = {
+	items: Array<Item>;
+	formIsVisible: boolean;
+};
+
 const ArticleBrowser = () => {
 	// React 19 data loading with useTransition()
 	const [isLoading, startLoadTransition] = useTransition();
-	const [items, setItems] = useState<Array<Item>>([]);
+	const [articleState, setArticleState] = useState<ArticleState>({
+		items: [],
+		formIsVisible: false,
+	});
 
 	useEffect(() => {
 		const abortController = new AbortController();
 		startLoadTransition(async () => {
-			const data = await service.fetchItems(abortController.signal);
-			setItems(data);
+			const items = await service.fetchItems(abortController.signal);
+			setArticleState((prevState) => ({ ...prevState, items }));
 		});
 		return () => abortController.abort();
 	}, []);
 
-	// React 19 update handling via useActionState() - see ArticleForm
-	const [formIsVisible, showForm, hideForm] = useBoolean(false);
-
-	const handleAdd = (savedItem: Item) => {
-		setItems((prevItems) => [savedItem, ...prevItems]);
-		hideForm();
-	};
-
-	const loader = (
-		<div className="card flex-column flex-center flex-grow-1">
-			<Spinner />
-		</div>
+	// React 19 update handling via startTransition() and useOptimistic()
+	const [optimisticArticleState, addOptimisticItem] = useOptimistic(
+		articleState,
+		(prevState, newItem: Item) => ({
+			items: [
+				newItem,
+				// Workaround for https://github.com/facebook/react/issues/28574
+				...prevState.items.filter((item) => item.title !== newItem.title),
+			],
+			formIsVisible: false,
+		})
 	);
+
+	const showForm = () =>
+		setArticleState((prevState) => ({
+			...prevState,
+			formIsVisible: true,
+		}));
+
+	const hideForm = () =>
+		setArticleState((prevState) => ({
+			...prevState,
+			formIsVisible: false,
+		}));
+
+	// This entire function is an Action, so all state updates other than
+	// optimistic are marked as transitions. We must set form visibility in our
+	// optimistic update, else it won't hide until the service call completes.
+	const handleSubmit = (newItem: Item) =>
+		startTransition(async () => {
+			addOptimisticItem({ ...newItem, saving: true });
+			const result = await service.submitItem(newItem);
+			if ('error' in result) handleFailure(result.error);
+			else handleSuccess(result.item);
+		});
+
+	const handleSuccess = (savedItem: Item) =>
+		setArticleState((prevState) => ({
+			items: [savedItem, ...prevState.items],
+			formIsVisible: false,
+		}));
+
+	const handleFailure = (error: string) => {
+		hideForm();
+		console.warn(error);
+	};
 
 	return (
 		<div className="article-browser flex-column gap-2">
@@ -204,12 +224,17 @@ const ArticleBrowser = () => {
 			</header>
 			<main className="card flex-column flex-grow-1">
 				{isLoading ? (
-					loader
+					<div className="card flex-column flex-center flex-grow-1">
+						<Spinner />
+					</div>
 				) : (
-					<ArticleList items={items} inert={formIsVisible} />
+					<ArticleList
+						items={optimisticArticleState.items}
+						inert={optimisticArticleState.formIsVisible}
+					/>
 				)}
-				{formIsVisible && (
-					<ArticleForm onSuccess={handleAdd} onCancel={hideForm} />
+				{optimisticArticleState.formIsVisible && (
+					<ArticleForm onSubmit={handleSubmit} onCancel={hideForm} />
 				)}
 			</main>
 		</div>

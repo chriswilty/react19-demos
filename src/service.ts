@@ -3,6 +3,7 @@ export type Item = {
 	description: Array<string>;
 	imageUrl: string;
 	imageAlt: string;
+	saving?: boolean;
 };
 
 export const baseUrl = 'http://localhost:3000/api';

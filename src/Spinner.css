@@ -6,8 +6,8 @@
 	animation: rotate 1.8s infinite linear;
 }
 
-.spinner.button {
-	height: 1rem;
+.spinner.h2 {
+	height: 1.5rem;
 	border-width: 0.25rem;
 }
 

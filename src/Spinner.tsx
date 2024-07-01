@@ -1,7 +1,7 @@
 import './Spinner.css';
 
 type SpinnerProps = {
-	size?: 'button' | 'standard';
+	size?: 'h2' | 'standard';
 };
 
 const Spinner = ({ size = 'standard' }: SpinnerProps) => (
