@@ -25,10 +25,11 @@ module.exports = {
 		project: ['./tsconfig.json', './tsconfig.node.json'],
 		tsconfigRootDir: __dirname,
 	},
-	plugins: ['react-refresh', 'jsx-a11y'],
+	plugins: ['react-refresh', 'jsx-a11y', 'react-compiler'],
 	rules: {
 		eqeqeq: 'error',
 		'prefer-template': 'error',
+		'react-compiler/react-compiler': 'error',
 		'react-refresh/only-export-components': [
 			'warn',
 			{ allowConstantExport: true },
